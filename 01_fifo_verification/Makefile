@@ -6,7 +6,7 @@
 #   mingw32-make clean    # Remove generated files
 
 PYTHON := python
-RUNNER := sim/run.py
+RUNNER := ../common/scripts/run.py
 
 RTL  := rtl/sync_fifo.sv
 TB   := tb/top/tb_v1.sv
