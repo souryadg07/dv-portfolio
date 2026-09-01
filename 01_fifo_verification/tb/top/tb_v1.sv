@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-
+`define DUMP
 module tb_sync_fifo;
 
     localparam int unsigned DATA_WIDTH = 8;
