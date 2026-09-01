@@ -3,8 +3,7 @@ from pathlib import Path
 import subprocess
 
 import os
-from pathlib import Path
-
+import shutil
 
 def setup_questa_environment():
     questa_bin = Path(r"C:\lscc\radiant\2025.2\questasim\win64")
@@ -14,18 +13,6 @@ def setup_questa_environment():
 
     os.environ["PATH"] = f"{questa_bin}{os.pathsep}{os.environ.get('PATH', '')}"
 
-def setup_gtkwave_environment():
-    gtkwave_bin = Path(r"C:\Users\soury\oss-cad-suite\bin")
-
-    if not (gtkwave_bin / "gtkwave.exe").is_file():
-        raise FileNotFoundError(
-            f"GTKWave executable not found: {gtkwave_bin}"
-        )
-
-    os.environ["PATH"] = (
-        f"{gtkwave_bin}{os.pathsep}"
-        f"{os.environ.get('PATH', '')}"
-    )
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -54,11 +41,16 @@ def parse_arguments():
         default=Path("waves.vcd"),
         help="Path for the generated VCD waveform.",
     )
-
     parser.add_argument(
         "--gui",
         action="store_true",
         help="Open the generated waveform in GTKWave.",
+    )
+    parser.add_argument(
+        "--sim",
+        choices=("questa", "verilator"),
+        default="questa",
+        help="Simulator backend.",
     )
     return parser.parse_args()
 
@@ -75,7 +67,7 @@ def validate_sources(sources):
         validated_sources.append(source)
     return validated_sources
 
-def run_simulation(top_module, output_directory, waveform):
+def run_questa(top_module, output_directory, waveform):
     if not waveform.is_absolute():
         waveform = output_directory / waveform
 
@@ -100,7 +92,7 @@ def run_simulation(top_module, output_directory, waveform):
 
     return waveform
 
-def compile_design(sources, output_directory):
+def compile_questa(sources, output_directory):
     work_library = output_directory / "work"
 
     if not work_library.exists():
@@ -137,23 +129,106 @@ def open_waveform(waveform):
         cwd=waveform.parent,
     )
 
+
+def run_verilator(top_module, sources, output_directory, waveform):
+    oss_root = Path(r"C:\Users\soury\oss-cad-suite")
+    verilator = oss_root / "bin" / "verilator_bin.exe"
+    object_directory = output_directory / f"obj_{top_module}"
+
+    if not verilator.is_file():
+        raise FileNotFoundError(f"Verilator not found: {verilator}")
+
+    if not waveform.is_absolute():
+        waveform = output_directory / waveform
+
+    waveform = waveform.resolve()
+    waveform.parent.mkdir(parents=True, exist_ok=True)
+
+    environment = os.environ.copy()
+    environment["VERILATOR_ROOT"] = (
+        oss_root / "share" / "verilator"
+    ).as_posix()
+
+    environment["PATH"] = os.pathsep.join(
+        [
+            r"C:\Users\soury\mingw64\bin",
+            str(oss_root / "bin"),
+            str(oss_root / "lib"),
+            r"C:\Program Files\Git\usr\bin",
+            environment.get("PATH", ""),
+        ]
+    )
+
+    make = shutil.which("mingw32-make")
+    if not make:
+        raise FileNotFoundError(
+            "mingw32-make was not found on PATH."
+        )
+    environment["MAKE"] = make
+
+    subprocess.run(
+        [
+            verilator,
+            "--binary",
+            "--timing",
+            "--trace",
+            "-Wno-fatal",
+            "--top-module",
+            top_module,
+            "--Mdir",
+            object_directory,
+            "-o",
+            top_module,
+            *sources,
+        ],
+        cwd=output_directory,
+        env=environment,
+        check=True,
+    )
+
+    executable = object_directory / f"{top_module}.exe"
+
+    if not executable.is_file():
+        raise FileNotFoundError(
+            f"Verilator executable was not generated: {executable}"
+        )
+
+    subprocess.run(
+        [executable, f"+wave={waveform.as_posix()}"],
+        cwd=output_directory,
+        env=environment,
+        check=True,
+    )
+
+    return waveform
+
+
 def main():
     args = parse_arguments()
 
     sources = validate_sources(args.sources)
+
     output_directory = args.out.resolve()
     output_directory.mkdir(parents=True, exist_ok=True)
 
-    setup_questa_environment()
-    compile_design(sources, output_directory)
-    waveform = run_simulation(
-    args.top,
-    output_directory,
-    args.wave,
-    )
+    if args.sim == "questa":
+        setup_questa_environment()
+        compile_questa(sources, output_directory)
+
+        waveform = run_questa(
+            args.top,
+            output_directory,
+            args.wave,
+        )
+    else:
+        waveform = run_verilator(
+            args.top,
+            sources,
+            output_directory,
+            args.wave,
+        )
 
     if args.gui:
-        setup_gtkwave_environment()
         open_waveform(waveform)
 
     return 0
