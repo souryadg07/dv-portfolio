@@ -18,6 +18,7 @@ TB_TOP  := tb_sync_fifo
 OUT     := sim/out
 WAVE    := waves.vcd
 SIM     ?= questa
+BUILD_LOG := verilator-build.log
 
 SOURCES := $(RTL) $(TB)
 
@@ -35,4 +36,4 @@ lint:
 	$(PYTHON) $(RUNNER) $(RTL) --top $(RTL_TOP) --out $(OUT) --lint
 
 clean:
-	$(PYTHON) -c "import shutil; shutil.rmtree('$(OUT)', ignore_errors=True)"
+	$(PYTHON) -c "import shutil, pathlib; shutil.rmtree('$(OUT)', ignore_errors=True); pathlib.Path('$(BUILD_LOG)').unlink(missing_ok=True)"
