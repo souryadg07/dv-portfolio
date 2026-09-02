@@ -216,3 +216,49 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------------------------------------------------------
+# HDL simulation artifacts
+# ---------------------------------------------------------------
+# Questa / ModelSim
+work/
+*/work/
+**/sim/out/
+transcript
+vsim.wlf
+vsim_stacktrace.vstf
+modelsim.ini
+*.mti
+*.vstf
+*.wlf
+covhtmlreport/
+*.ucdb
+
+# Vivado / XSim
+xsim.dir/
+.Xil/
+*.jou
+*.pb
+*.wdb
+*.str
+xelab.log
+xvlog.log
+xsim.log
+xvlog.pb
+xelab.pb
+xsim*.backup.jou
+xsim*.backup.log
+xcrg_report/
+*.xcrg
+
+# Icarus / GTKWave
+*.vvp
+*.out
+*.vcd
+*.fst
+*.fst.hier
+*.gtkw.bak
+
+# Generic
+*.log
+!docs/**/*.log
