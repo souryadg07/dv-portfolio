@@ -52,6 +52,11 @@ def parse_arguments():
         default="questa",
         help="Simulator backend.",
     )
+    parser.add_argument(
+        "--lint",
+        action="store_true",
+        help="Run Verilator lint only.",
+    )
     return parser.parse_args()
 
 
@@ -130,7 +135,7 @@ def open_waveform(waveform):
     )
 
 
-def run_verilator(top_module, sources, output_directory, waveform):
+def run_verilator(top_module, sources, output_directory, waveform, lint=False):
     oss_root = Path(r"C:\Users\soury\oss-cad-suite")
     verilator = oss_root / "bin" / "verilator_bin.exe"
     object_directory = output_directory / f"obj_{top_module}"
@@ -159,12 +164,38 @@ def run_verilator(top_module, sources, output_directory, waveform):
         ]
     )
 
-    make = shutil.which("mingw32-make")
+    make = shutil.which(
+        "mingw32-make",
+        path=environment["PATH"],
+    )
     if not make:
         raise FileNotFoundError(
             "mingw32-make was not found on PATH."
         )
     environment["MAKE"] = make
+
+    if lint:
+        report = output_directory / "lint-report.sarif"
+
+        subprocess.run(
+            [
+                verilator,
+                "--lint-only",
+                "-Wall",
+                "-Wno-fatal",
+                "--diagnostics-sarif-output",
+                report,
+                "--top-module",
+                top_module,
+                *sources,
+            ],
+            cwd=output_directory,
+            env=environment,
+            check=True,
+        )
+
+        print(f"Lint report: {report}")
+        return None
 
     subprocess.run(
         [
@@ -210,6 +241,16 @@ def main():
 
     output_directory = args.out.resolve()
     output_directory.mkdir(parents=True, exist_ok=True)
+
+    if args.lint:
+        run_verilator(
+            args.top,
+            sources,
+            output_directory,
+            args.wave,
+            lint=True,
+        )
+        return 0
 
     if args.sim == "questa":
         setup_questa_environment()
