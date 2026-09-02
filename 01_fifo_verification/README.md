@@ -16,6 +16,5 @@ mingw32-make                                  # run the testbench on Questa
 mingw32-make SIM=verilator                    # same testbench on Verilator
 mingw32-make wave                             # run, then open the VCD in GTKWave
 mingw32-make lint                             # Verilator lint only, no simulation
-mingw32-make DEFINES="BUG_FULL_FLAG"          # compile with macros defined
 mingw32-make clean                            # remove sim/out and waves/*.vcd
 ```
