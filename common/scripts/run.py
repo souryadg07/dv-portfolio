@@ -89,13 +89,13 @@ def run_questa(top_module, output_directory, waveform):
             top_module,
             f"+wave={waveform.as_posix()}",
             "-do",
-            "run -all; quit -code 0",
+            "add wave -r /*; log -r /*; run -all; quit -f",
         ],
         cwd=output_directory,
         check=True,
     )
 
-    return waveform
+    return output_directory / "vsim.wlf"
 
 def compile_questa(sources, output_directory):
     work_library = output_directory / "work"
@@ -115,6 +115,12 @@ def compile_questa(sources, output_directory):
 
 
 def open_waveform(waveform):
+    if waveform.suffix == ".wlf":
+        subprocess.Popen(
+            ["vsim", "-view", waveform.name],
+            cwd=waveform.parent,
+        )
+        return
     environment_script = Path(
         r"C:\Users\soury\oss-cad-suite\environment.bat"
     )
