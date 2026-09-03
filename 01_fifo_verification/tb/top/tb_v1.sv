@@ -172,7 +172,7 @@ module tb_sync_fifo;
         repeat (2) @(posedge clk_i);
         rst_ni = 1'b1;
 
-        // Avoid checking in the same simulation region as the clock edge.
+        // Avoid checking in the same simulation region as the clock .
         @(posedge clk_i);
         #1;
 
