@@ -6,10 +6,28 @@ module tb_sync_fifo_v2;
     localparam int unsigned DATA_WIDTH = 8;
     localparam int unsigned DEPTH      = 4;
 
+    `include "../txn/fifo_txn.sv"
+
     logic clk_i = 1'b0;
     always #5 clk_i = ~clk_i;
 
     fifo_if #(.DATA_WIDTH(DATA_WIDTH), .DEPTH(DEPTH)) fif (clk_i);
+
+    // Occupancy histogram: counts how many clock cycles the FIFO spent at each
+    // fill level. One tally per edge, so counts only ever grow and always sum
+    // to the number of cycles sampled. A missing box means that fill level was
+    // never reached -- e.g. no occ[DEPTH] means full_o and overflow went untested.
+    int occ_hist[int];
+    always @(fif.cb_mon) begin
+        int occ;
+        if (fif.rst_ni === 1'b1) begin
+            occ = fif.cb_mon.occupancy_o; //comes from fifo directly, not the interface
+                                          //states that what depth of fifo is currently filled with data
+            if (!occ_hist.exists(occ))
+                occ_hist[occ] = 0;
+            occ_hist[occ] = occ_hist[occ] + 1;
+        end
+    end
 
     task automatic fifo_write(input logic [DATA_WIDTH-1:0] data);
         fif.cb_drv.wr_en_i   <= 1'b1;
@@ -46,6 +64,16 @@ module tb_sync_fifo_v2;
         fif.cb_drv.flush_i <= 1'b0;
         @(fif.cb_mon);
     endtask
+
+    task automatic drive_txn(fifo_txn #(DATA_WIDTH) t);
+        fif.cb_drv.wr_en_i   <= t.wr_en;
+        fif.cb_drv.rd_en_i   <= t.rd_en;
+        fif.cb_drv.wr_data_i <= t.wr_data;
+        @(fif.cb_drv);
+        fif.cb_drv.wr_en_i   <= 1'b0;
+        fif.cb_drv.rd_en_i   <= 1'b0;
+    endtask
+
 
     int pass_count, fail_count;
     task automatic check(string name, bit condition);
@@ -89,6 +117,9 @@ module tb_sync_fifo_v2;
         logic [DATA_WIDTH-1:0] rdata;
         bit                    rvalid;
 
+        fifo_txn #(DATA_WIDTH) t;
+        fifo_txn #(DATA_WIDTH) log_q[$];
+
         do_reset();
         check("empty after reset",     fif.cb_mon.empty_o);
         check("not full after reset", !fif.cb_mon.full_o);
@@ -97,8 +128,11 @@ module tb_sync_fifo_v2;
         fifo_write(8'h11);
         fifo_write(8'h22);
         fifo_write(8'h33);
+        fifo_write(8'h44);
         @(fif.cb_mon);
-        check("occupancy 3 after 3 writes", fif.cb_mon.occupancy_o == 3);
+        check("full after 4 writes", fif.cb_mon.full_o);
+        check("occupancy 4 after 4 writes", fif.cb_mon.occupancy_o == 4);
+
 
         fifo_read(rdata, rvalid);
         check("read 1 valid", rvalid);
@@ -108,7 +142,7 @@ module tb_sync_fifo_v2;
         check("read 2 valid", rvalid);
         check("read 2 data",  rdata == 8'h22);
 
-        check("occupancy 1 after 2 reads", fif.cb_mon.occupancy_o == 1);
+        check("occupancy 2 after 2 reads", fif.cb_mon.occupancy_o == 2);
 
         // flush from partially filled
         fifo_write(8'h44);
@@ -122,8 +156,20 @@ module tb_sync_fifo_v2;
         fifo_read(rdata, rvalid);
         check("reuse after flush", rvalid && rdata == 8'hA5);
 
+
+        repeat (200) begin
+            t = new();
+            t.randomize_manual();
+            drive_txn(t);
+            log_q.push_back(t);
+        end
+
+        $display("--- occupancy histogram ---");
+        foreach (occ_hist[i])
+            $display("occ[%0d] = %0d", i, occ_hist[i]);
+
         $display("=== %0d passed, %0d failed ===", pass_count, fail_count);
-        $display(fail_count == 0 ? "TEST PASSED" : "TEST FAILED");
+        $display("%s", fail_count == 0 ? "TEST PASSED" : "TEST FAILED");
 
         #100
         $finish;

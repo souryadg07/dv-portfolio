@@ -5,14 +5,27 @@ import subprocess
 import os
 import shutil
 
+# def setup_questa_environment():
+#     # questa_bin = Path(r"C:\lscc\radiant\2025.2\questasim\win64")
+#     questa_bin = Path(r"C:\altera_lite\25.1std\questa_fse\win64")
+
+#     if not questa_bin.is_dir():
+#         raise FileNotFoundError(f"Questa directory not found: {questa_bin}")
+
+#     os.environ["PATH"] = f"{questa_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+
 def setup_questa_environment():
-    questa_bin = Path(r"C:\lscc\radiant\2025.2\questasim\win64")
+    questa_bin = Path(r"C:\altera_lite\25.1std\questa_fse\win64")
 
     if not questa_bin.is_dir():
         raise FileNotFoundError(f"Questa directory not found: {questa_bin}")
 
     os.environ["PATH"] = f"{questa_bin}{os.pathsep}{os.environ.get('PATH', '')}"
 
+    license_file = Path(r"c:\altera_lite\LR-186474_License.dat")
+    if license_file.is_file():
+        os.environ["SALT_LICENSE_SERVER"] = str(license_file)
+        os.environ["LM_LICENSE_FILE"] = str(license_file)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -108,7 +121,7 @@ def compile_questa(sources, output_directory):
         )
 
     subprocess.run(
-        ["vlog", "-sv", "-work", "work", *sources],
+        ["vlog", "-sv", "+define+SIMULATION", "+incdir+../../tb/txn", "-work", "work", *sources],
         cwd=output_directory,
         check=True,
     )
