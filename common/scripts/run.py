@@ -70,6 +70,14 @@ def parse_arguments():
         action="store_true",
         help="Run Verilator lint only.",
     )
+
+    parser.add_argument(
+        "--incdir",
+        nargs="*",
+        type=Path,
+        default=[],
+        help="Include directories for `include resolution.",
+    )
     return parser.parse_args()
 
 
@@ -110,18 +118,17 @@ def run_questa(top_module, output_directory, waveform):
 
     return output_directory / "vsim.wlf"
 
-def compile_questa(sources, output_directory):
+def compile_questa(sources, output_directory, incdirs=()):
     work_library = output_directory / "work"
 
     if not work_library.exists():
-        subprocess.run(
-            ["vlib", "work"],
-            cwd=output_directory,
-            check=True,
-        )
+        subprocess.run(["vlib", "work"], cwd=output_directory, check=True)
+
+    incdir_args = [f"+incdir+{d.resolve().as_posix()}" for d in incdirs]
 
     subprocess.run(
-        ["vlog", "-sv", "+define+SIMULATION", "+incdir+../../tb/txn", "-work", "work", *sources],
+        ["vlog", "-sv", "+define+SIMULATION", *incdir_args,
+         "-work", "work", *sources],
         cwd=output_directory,
         check=True,
     )
@@ -273,7 +280,7 @@ def main():
 
     if args.sim == "questa":
         setup_questa_environment()
-        compile_questa(sources, output_directory)
+        compile_questa(sources, output_directory, args.incdir)
 
         waveform = run_questa(
             args.top,

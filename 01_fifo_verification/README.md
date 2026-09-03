@@ -18,3 +18,18 @@ mingw32-make wave                             # run, then open the VCD in GTKWav
 mingw32-make lint                             # Verilator lint only, no simulation
 mingw32-make clean                            # remove sim/out and waves/*.vcd
 ```
+
+
+## Architecture
+
+```
+generator (inline)  →  mailbox  →  driver  →  DUT pins
+                                                 │
+                                              monitor
+                                                 │
+                                      ┌──────────┴──────────┐
+                                   wr mailbox          rd mailbox
+                                      └──────────┬──────────┘
+                                            scoreboard
+                                          (queue model)
+```

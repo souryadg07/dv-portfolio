@@ -13,6 +13,7 @@ PYTHON := python
 RUNNER := ../common/scripts/run.py
 
 RTL     := rtl/sync_fifo.sv
+RTL_W_BUG := rtl/sync_fifo_with_bug.sv
 TB      ?= tb/top/tb_v1.sv
 SRC     ?=
 RTL_TOP := sync_fifo
@@ -21,21 +22,24 @@ OUT     := sim/out
 WAVE    := waves.vcd
 SIM     ?= questa
 BUILD_LOG := verilator-build.log
-
+SOURCES_RTL_W_BUGS := $(RTL_W_BUG) $(SRC) $(TB)
 SOURCES := $(RTL) $(SRC) $(TB)
+INCDIRS ?= tb/txn tb/agent
 
-.PHONY: all run wave lint clean
+.PHONY: all run wave lint clean buggy_run
 
 all: run
 
 run:
-	$(PYTHON) $(RUNNER) $(SOURCES) --top $(TB_TOP) --out $(OUT) --sim $(SIM)
-
+	$(PYTHON) $(RUNNER) $(SOURCES) --top $(TB_TOP) --out $(OUT) --sim $(SIM) --incdir $(INCDIRS)
 wave:
-	$(PYTHON) $(RUNNER) $(SOURCES) --top $(TB_TOP) --out $(OUT) --wave $(WAVE) --sim $(SIM) --gui
+	$(PYTHON) $(RUNNER) $(SOURCES) --top $(TB_TOP) --out $(OUT) --wave $(WAVE) --sim $(SIM) --gui --incdir $(INCDIRS)
 
 lint:
 	$(PYTHON) $(RUNNER) $(RTL) --top $(RTL_TOP) --out $(OUT) --lint
 
 clean:
 	$(PYTHON) -c "import shutil, pathlib; shutil.rmtree('$(OUT)', ignore_errors=True); pathlib.Path('$(BUILD_LOG)').unlink(missing_ok=True)"
+
+buggy_run:
+	$(PYTHON) $(RUNNER) $(SOURCES_RTL_W_BUGS) --top $(TB_TOP) --out $(OUT) --sim $(SIM) --incdir $(INCDIRS)
