@@ -42,4 +42,4 @@ clean:
 	$(PYTHON) -c "import shutil, pathlib; shutil.rmtree('$(OUT)', ignore_errors=True); pathlib.Path('$(BUILD_LOG)').unlink(missing_ok=True)"
 
 buggy_run:
-	$(PYTHON) $(RUNNER) $(SOURCES_RTL_W_BUGS) --top $(TB_TOP) --out $(OUT) --sim $(SIM) --incdir $(INCDIRS)
+	$(PYTHON) $(RUNNER) $(SOURCES_RTL_W_BUGS) --top $(TB_TOP) --out $(OUT) --wave $(WAVE) --sim $(SIM) --gui --incdir $(INCDIRS)
