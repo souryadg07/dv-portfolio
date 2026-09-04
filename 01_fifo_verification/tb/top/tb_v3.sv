@@ -11,6 +11,9 @@ module tb_sync_fifo_v3;
   `include "fifo_monitor.sv"
   `include "base_test.sv"
   `include "fifo_tests.sv"
+  `include "fifo_wr_driver.sv"
+  `include "fifo_rd_driver.sv"
+
 
   logic clk_i = 1'b0;
   always #5 clk_i = ~clk_i;
@@ -100,8 +103,8 @@ module tb_sync_fifo_v3;
     end
 
 
-    gen2drv = new();
-    drv     = new(fif, gen2drv);
+    gen2drv          = new();
+    drv              = new(fif, gen2drv);
     drv.target_count = 200;
 
     fork
@@ -116,6 +119,26 @@ module tb_sync_fifo_v3;
 
     wait (drv.all_done.triggered);
     repeat (5) @(fif.cb_mon);
+
+    // ---- Two-agent phase: independent producer and consumer ----
+    begin
+      semaphore                           bus_sem;
+      fifo_wr_driver #(DATA_WIDTH, DEPTH) wdrv;
+      fifo_rd_driver #(DATA_WIDTH, DEPTH) rdrv;
+
+      bus_sem = new(1);  // one token = mutual exclusion
+      wdrv    = new(fif, bus_sem, 50);
+      rdrv    = new(fif, bus_sem, 50);
+
+      fork
+        wdrv.run();
+        rdrv.run();
+      join_none
+
+      wait (wdrv.done.triggered);
+      wait (rdrv.done.triggered);
+      repeat (5) @(fif.cb_mon);
+    end
 
     mon.report();
     mon.report_coverage();
