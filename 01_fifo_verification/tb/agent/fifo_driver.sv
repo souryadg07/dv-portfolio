@@ -7,6 +7,9 @@ class fifo_driver #(
   mailbox #(fifo_txn #(DATA_WIDTH))    gen2drv;
   int                                  drive_count;
 
+  event                                all_done;
+  int                                  target_count;  // 0 = run indefinitely
+
   function new(virtual fifo_if #(DATA_WIDTH, DEPTH) vif, mailbox#(fifo_txn#(DATA_WIDTH)) gen2drv);
     this.vif     = vif;
     this.gen2drv = gen2drv;
@@ -29,6 +32,8 @@ class fifo_driver #(
     forever begin
       gen2drv.get(t);  // blocking: waits until something arrives
       drive(t);
+      if (target_count > 0 && drive_count == target_count)
+        ->all_done;  // signal: the batch is finished
     end
   endtask
 

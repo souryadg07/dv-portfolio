@@ -102,6 +102,7 @@ module tb_sync_fifo_v3;
 
     gen2drv = new();
     drv     = new(fif, gen2drv);
+    drv.target_count = 200;
 
     fork
       drv.run();
@@ -113,7 +114,7 @@ module tb_sync_fifo_v3;
       gen2drv.put(t);
     end
 
-    wait (drv.drive_count == 200);
+    wait (drv.all_done.triggered);
     repeat (5) @(fif.cb_mon);
 
     mon.report();
