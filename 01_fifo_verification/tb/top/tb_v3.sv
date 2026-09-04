@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 `define DUMP
 
-module tb_sync_fifo_v2;
+module tb_sync_fifo_v3;
 
   localparam int unsigned DATA_WIDTH = 8;
   localparam int unsigned DEPTH = 4;
@@ -124,6 +124,8 @@ module tb_sync_fifo_v2;
     $display("=== %0d passed, %0d failed ===", total_pass, total_fail);
     $display("%s", total_fail == 0 ? "TEST PASSED" : "TEST FAILED");
 
+    if (total_pass + total_fail == 0) $fatal(1, "No checks executed -- test suite did not run");
+
     #100 $finish;
   end
 
@@ -132,7 +134,7 @@ module tb_sync_fifo_v2;
     string wave_file;
     if (!$value$plusargs("wave=%s", wave_file)) wave_file = "dump.vcd";
     $dumpfile(wave_file);
-    $dumpvars(0, tb_sync_fifo_v2);
+    $dumpvars(0, tb_sync_fifo_v3);
   end
 `endif
 
