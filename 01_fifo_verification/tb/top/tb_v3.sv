@@ -117,6 +117,7 @@ module tb_sync_fifo_v3;
     repeat (5) @(fif.cb_mon);
 
     mon.report();
+    mon.report_coverage();
     sb.report();
 
     total_fail += sb.mismatch_count;
