@@ -24,7 +24,7 @@ SIM     ?= questa
 BUILD_LOG := verilator-build.log
 SOURCES_RTL_W_BUGS := $(RTL_W_BUG) $(SRC) $(TB)
 SOURCES := $(RTL) $(SRC) $(TB)
-INCDIRS ?= tb/txn tb/agent
+INCDIRS ?= tb/txn tb/agent tb/tests
 
 .PHONY: all run wave lint clean buggy_run
 
